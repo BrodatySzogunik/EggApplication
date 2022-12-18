@@ -1,3 +1,4 @@
 ﻿  EggApplication.cpp
-C:\Users\kmord\source\repos\EggApplication\EggApplication.cpp(590,1): warning C4326: zwracany typ "main" powinien być "int" zamiast "void"
+C:\Users\kmord\source\repos\EggApplication\EggApplication.cpp(774,1): warning C4326: zwracany typ "main" powinien być "int" zamiast "void"
+C:\Users\kmord\source\repos\EggApplication\EggApplication.cpp(789,18): warning C4129: "c": nierozpoznany znak sekwencji ucieczki
   EggApplication.vcxproj -> C:\Users\kmord\source\repos\EggApplication\Debug\EggApplication.exe
