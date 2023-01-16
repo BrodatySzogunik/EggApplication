@@ -75,6 +75,151 @@ static GLfloat theta[] = { 0.0, 0.0, 0.0 }; // trzy kąty obrotu
 float step = 1.0 / N;
 
 
+
+/*************************************************************************************/
+ // Funkcja wczytuje dane obrazu zapisanego w formacie TGA w pliku o nazwie
+ // FileName, alokuje pamięć i zwraca wskaźnik (pBits) do bufora w którym
+ // umieszczone są dane.
+ // Ponadto udostępnia szerokość (ImWidth), wysokość (ImHeight) obrazu
+ // tekstury oraz dane opisujące format obrazu według specyfikacji OpenGL
+ // (ImComponents) i (ImFormat).
+ // Jest to bardzo uproszczona wersja funkcji wczytującej dane z pliku TGA.
+ // Działa tylko dla obrazów wykorzystujących 8, 24, or 32 bitowy kolor.
+ // Nie obsługuje plików w formacie TGA kodowanych z kompresją RLE.
+/*************************************************************************************/
+
+
+GLbyte* LoadTGAImage(const char* FileName, GLint* ImWidth, GLint* ImHeight, GLint* ImComponents, GLenum* ImFormat)
+{
+
+    /*************************************************************************************/
+
+    // Struktura dla nagłówka pliku  TGA
+
+
+#pragma pack(1)           
+    typedef struct
+    {
+        GLbyte    idlength;
+        GLbyte    colormaptype;
+        GLbyte    datatypecode;
+        unsigned short    colormapstart;
+        unsigned short    colormaplength;
+        unsigned char     colormapdepth;
+        unsigned short    x_orgin;
+        unsigned short    y_orgin;
+        unsigned short    width;
+        unsigned short    height;
+        GLbyte    bitsperpixel;
+        GLbyte    descriptor;
+    }TGAHEADER;
+#pragma pack(8)
+
+    FILE* pFile;
+    TGAHEADER tgaHeader;
+    unsigned long lImageSize;
+    short sDepth;
+    GLbyte* pbitsperpixel = NULL;
+
+
+    /*************************************************************************************
+    // Wartości domyślne zwracane w przypadku błędu
+
+    
+
+    /*************************************************************************************/
+    // Przeczytanie nagłówka pliku 
+
+    *ImWidth = 0;
+    *ImHeight = 0;
+    *ImFormat = GL_BGR_EXT;
+    *ImComponents = GL_RGB8;
+    ;
+    pFile = fopen(FileName, "rb");
+    if (pFile == NULL)
+        return NULL;
+
+    fread(&tgaHeader, sizeof(TGAHEADER), 1, pFile);
+
+
+    /*************************************************************************************/
+
+    // Odczytanie szerokości, wysokości i głębi obrazu
+
+    *ImWidth = tgaHeader.width;
+    *ImHeight = tgaHeader.height;
+    sDepth = tgaHeader.bitsperpixel / 8;
+
+
+    /*************************************************************************************/
+    // Sprawdzenie, czy głębia spełnia założone warunki (8, 24, lub 32 bity)
+
+    if (tgaHeader.bitsperpixel != 8 && tgaHeader.bitsperpixel != 24 && tgaHeader.bitsperpixel != 32)
+        return NULL;
+
+    /*************************************************************************************/
+
+    // Obliczenie rozmiaru bufora w pamięci
+
+
+    lImageSize = tgaHeader.width * tgaHeader.height * sDepth;
+
+
+    /*************************************************************************************/
+
+    // Alokacja pamięci dla danych obrazu
+
+
+    pbitsperpixel = (GLbyte*)malloc(lImageSize * sizeof(GLbyte));
+
+    if (pbitsperpixel == NULL)
+        return NULL;
+
+    if (fread(pbitsperpixel, lImageSize, 1, pFile) != 1)
+    {
+        free(pbitsperpixel);
+        return NULL;
+    }
+
+
+    /*************************************************************************************/
+
+    // Ustawienie formatu OpenGL
+
+
+    switch (sDepth)
+
+    {
+
+    case 3:
+
+        *ImFormat = GL_BGR_EXT;
+
+        *ImComponents = GL_RGB8;
+
+        break;
+
+    case 4:
+
+        *ImFormat = GL_BGRA_EXT;
+
+        *ImComponents = GL_RGBA8;
+
+        break;
+
+    case 1:
+        *ImFormat = GL_LUMINANCE;
+        *ImComponents = GL_LUMINANCE8;
+        break;
+    };
+
+
+
+    fclose(pFile);
+    return pbitsperpixel;
+
+}
+
 void Mouse(int btn, int state, int x, int y)
 {
     if (btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
@@ -377,137 +522,49 @@ void Egg() {
         glEnd();
         break;
     case 3:
-
         glBegin(GL_TRIANGLES);
-        for (int i = N / 2; i < N; i++) {
-            int solver = N - i;
-            for (int j = 0; j < N - 1; j++) {
-                if (i == N - 1) {
-                    glVertex3f(EggPoints[i][j + 1].x, EggPoints[i][j + 1].y - 5, EggPoints[i][j + 1].z);
-                    glNormal3f(EggPoints[i][j + 1].NVectorX, EggPoints[i][j + 1].NVectorY, EggPoints[i][j + 1].NVectorZ);
-                    glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
-                    glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
-                    glVertex3f(EggPoints[0][0].x, EggPoints[0][0].y - 5, EggPoints[0][0].z);
-                    glNormal3f(EggPoints[0][0].NVectorX, EggPoints[0][0].NVectorY, EggPoints[0][0].NVectorZ);
 
-                }
-                else {
-                    
-                    
-                    glVertex3f(EggPoints[i + 1][j + 1].x, EggPoints[i + 1][j + 1].y - 5, EggPoints[i + 1][j + 1].z);
-                    glNormal3f(EggPoints[i + 1][j + 1].NVectorX, EggPoints[i + 1][j + 1].NVectorY, EggPoints[i + 1][j + 1].NVectorZ);
-                    
-                    glVertex3f(EggPoints[i + 1][j].x, EggPoints[i + 1][j].y - 5, EggPoints[i + 1][j].z);
-                    glNormal3f(EggPoints[i + 1][j].NVectorX, EggPoints[i + 1][j].NVectorY, EggPoints[i + 1][j].NVectorZ);
+        
+        glTexCoord2f(0.5f, 1.0f);
+        glVertex3f(0.0f, 1.0f, 0.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
 
-                    glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
-                    glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
+        glTexCoord2f(0.5f, 1.0f);
+        glVertex3f(0.0f, 1.0f, 0.0f);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
 
+        glTexCoord2f(0.5f, 1.0f);
+        glVertex3f(0.0f, 1.0f, 0.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
 
-                    //glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
-                    //glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
-                    //glVertex3f(EggPoints[i][j + 1].x, EggPoints[i][j + 1].y - 5, EggPoints[i][j + 1].z);
-                    //glNormal3f(EggPoints[i][j + 1].NVectorX, EggPoints[i][j + 1].NVectorY, EggPoints[i][j + 1].NVectorZ);
-                    //glVertex3f(EggPoints[i + 1][j + 1].x, EggPoints[i + 1][j + 1].y - 5, EggPoints[i + 1][j + 1].z);
-                    //glNormal3f(EggPoints[i + 1][j + 1].NVectorX, EggPoints[i + 1][j + 1].NVectorY, EggPoints[i + 1][j + 1].NVectorZ);
-
-                }
-                if (solver != N) {
-                    glVertex3f(EggPoints[i][0].x, EggPoints[i][0].y - 5, EggPoints[i][0].z);
-                    glNormal3f(EggPoints[i][0].NVectorX, EggPoints[i][0].NVectorY, EggPoints[i][0].NVectorZ);
-                    glVertex3f(EggPoints[solver][N - 1].x, EggPoints[solver][N - 1].y - 5, EggPoints[solver][N - 1].z);
-                    glNormal3f(EggPoints[solver][N - 1].NVectorX, EggPoints[solver][N - 1].NVectorY, EggPoints[solver][N - 1].NVectorZ);
-                    glVertex3f(EggPoints[solver + 1][N - 1].x, EggPoints[solver + 1][N - 1].y - 5, EggPoints[solver + 1][N - 1].z);
-                    glNormal3f(EggPoints[solver + 1][N - 1].NVectorX, EggPoints[solver + 1][N - 1].NVectorY, EggPoints[solver + 1][N - 1].NVectorZ);
-
-                    if (i != N / 2) {
-                        glVertex3f(EggPoints[i][0].x, EggPoints[i][0].y - 5, EggPoints[i][0].z);
-                        glNormal3f(EggPoints[i][0].NVectorX, EggPoints[i][0].NVectorY, EggPoints[i][0].NVectorZ);
-                        glVertex3f(EggPoints[i - 1][0].x, EggPoints[i - 1][0].y - 5, EggPoints[i - 1][0].z);
-                        glNormal3f(EggPoints[i - 1][0].NVectorX, EggPoints[i - 1][0].NVectorY, EggPoints[i - 1][0].NVectorZ);
-                        glVertex3f(EggPoints[solver + 1][N - 1].x, EggPoints[solver + 1][N - 1].y - 5, EggPoints[solver + 1][N - 1].z);
-                        glNormal3f(EggPoints[solver + 1][N - 1].NVectorX, EggPoints[solver + 1][N - 1].NVectorY - 5, EggPoints[solver + 1][N - 1].NVectorZ);
-
-                    }
-                }
-            }
-        }
-        glVertex3f(EggPoints[0][0].x, EggPoints[0][0].y - 5, EggPoints[0][0].z);
-        glNormal3f(EggPoints[0][0].NVectorX, EggPoints[0][0].NVectorY, EggPoints[0][0].NVectorZ);
-        glVertex3f(EggPoints[N - 1][0].x, EggPoints[N - 1][0].y - 5, EggPoints[N - 1][0].z);
-        glNormal3f(EggPoints[N - 1][0].NVectorX, EggPoints[N - 1][0].NVectorY, EggPoints[N - 1][0].NVectorZ);
-        glVertex3f(EggPoints[1][N - 1].x, EggPoints[1][N - 1].y - 5, EggPoints[1][N - 1].z);
-        glNormal3f(EggPoints[1][N - 1].NVectorX, EggPoints[1][N - 1].NVectorY, EggPoints[1][N - 1].NVectorZ);
-
-
-
-        glVertex3f(EggPoints[0][0].x, EggPoints[0][0].y - 5, EggPoints[0][0].z);
-        glNormal3f(EggPoints[0][0].NVectorX, EggPoints[0][0].NVectorY, EggPoints[0][0].NVectorZ);
-        glVertex3f(EggPoints[1][0].x, EggPoints[1][0].y - 5, EggPoints[1][0].z);
-        glNormal3f(EggPoints[1][0].NVectorX, EggPoints[1][0].NVectorY, EggPoints[1][0].NVectorZ);
-        glVertex3f(EggPoints[N - 1][N - 1].x, EggPoints[N - 1][N - 1].y - 5, EggPoints[N - 1][N - 1].z);
-        glNormal3f(EggPoints[N - 1][N - 1].NVectorX, EggPoints[N - 1][N - 1].NVectorY, EggPoints[N - 1][N - 1].NVectorZ);
-
-
-
-
-        for (int i = 0; i < N / 2 + 1; i++) {
-            int pom = N - i;
-            for (int j = 0; j < N - 1; j++) {
-                if (i == 1) {
-                    glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
-                    glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
-                    glVertex3f(EggPoints[i][j + 1].x, EggPoints[i][j + 1].y - 5, EggPoints[i][j + 1].z);
-                    glNormal3f(EggPoints[i][j + 1].NVectorX, EggPoints[i][j + 1].NVectorY, EggPoints[i][j + 1].NVectorZ);
-                    glVertex3f(EggPoints[0][0].x, EggPoints[0][0].y - 5, EggPoints[0][0].z);
-                    glNormal3f(EggPoints[0][0].NVectorX, EggPoints[0][0].NVectorY, EggPoints[0][0].NVectorZ);
-
-                }
-                else {
-                    if (i != 0) {
-                        glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
-                        glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
-                        glVertex3f(EggPoints[i - 1][j].x, EggPoints[i - 1][j].y - 5, EggPoints[i - 1][j].z);
-                        glNormal3f(EggPoints[i - 1][j].NVectorX, EggPoints[i - 1][j].NVectorY, EggPoints[i - 1][j].NVectorZ);
-                        glVertex3f(EggPoints[i - 1][j + 1].x, EggPoints[i - 1][j + 1].y - 5, EggPoints[i - 1][j + 1].z);
-                        glNormal3f(EggPoints[i - 1][j + 1].NVectorX, EggPoints[i - 1][j + 1].NVectorY, EggPoints[i - 1][j + 1].NVectorZ);
-
-
-
-
-
-                        glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
-                        glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
-                        glVertex3f(EggPoints[i][j + 1].x, EggPoints[i][j + 1].y - 5, EggPoints[i][j + 1].z);
-                        glNormal3f(EggPoints[i][j + 1].NVectorX, EggPoints[i][j + 1].NVectorY, EggPoints[i][j + 1].NVectorZ);
-                        glVertex3f(EggPoints[i - 1][j + 1].x, EggPoints[i - 1][j + 1].y - 5, EggPoints[i - 1][j + 1].z);
-                        glNormal3f(EggPoints[i - 1][j + 1].NVectorX, EggPoints[i - 1][j + 1].NVectorY, EggPoints[i - 1][j + 1].NVectorZ);
-                    }
-                }
-                if (pom != N) {
-                    glVertex3f(EggPoints[i][0].x, EggPoints[i][0].y - 5, EggPoints[i][0].z);
-                    glNormal3f(EggPoints[i][0].NVectorX, EggPoints[i][0].NVectorY, EggPoints[i][0].NVectorZ);
-                    glVertex3f(EggPoints[pom][N - 1].x, EggPoints[pom][N - 1].y - 5, EggPoints[pom][N - 1].z);
-                    glNormal3f(EggPoints[pom][N - 1].NVectorX, EggPoints[pom][N - 1].NVectorY, EggPoints[pom][N - 1].NVectorZ);
-                    glNormal3f(EggPoints[pom - 1][N - 1].NVectorX, EggPoints[pom - 1][N - 1].NVectorY, EggPoints[pom - 1][N - 1].NVectorZ);
-                    glVertex3f(EggPoints[pom - 1][N - 1].x, EggPoints[pom - 1][N - 1].y - 5, EggPoints[pom - 1][N - 1].z);
-
-
-
-
-                    glVertex3f(EggPoints[i][0].x, EggPoints[i][0].y - 5, EggPoints[i][0].z);
-                    glNormal3f(EggPoints[i][0].NVectorX, EggPoints[i][0].NVectorY, EggPoints[i][0].NVectorZ);
-                    glVertex3f(EggPoints[i + 1][0].x, EggPoints[i + 1][0].y - 5, EggPoints[i + 1][0].z);
-                    glNormal3f(EggPoints[i + 1][0].NVectorX, EggPoints[i + 1][0].NVectorY, EggPoints[i + 1][0].NVectorZ);
-                    glVertex3f(EggPoints[pom - 1][N - 1].x, EggPoints[pom - 1][N - 1].y - 5, EggPoints[pom - 1][N - 1].z);
-                    glNormal3f(EggPoints[pom - 1][N - 1].NVectorX, EggPoints[pom - 1][N - 1].NVectorY, EggPoints[pom - 1][N - 1].NVectorZ);
-
-
-                }
-            }
-        }
+        glTexCoord2f(0.5f, 1.0f);
+        glVertex3f(0.0f, 1.0f, 0.0f);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
 
         glEnd();
+        glBegin(GL_QUADS); 
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
+        glEnd();
+
         break;
     case 4:
         glutSolidTeapot(3.0);
@@ -554,7 +611,7 @@ void RenderScene(void)
 
     gluLookAt(viewer[0], viewer[1], viewer[2], 0.0, 0.0, 0.0, 0.0, up, 0.0);
     // Zdefiniowanie położenia obserwatora
-    Axes();
+    
     // Narysowanie osi przy pomocy funkcji zdefiniowanej powyżej 
 
 
@@ -576,6 +633,8 @@ void RenderScene(void)
 
     Egg();
 
+    Axes();
+
     glFlush();
     // Przekazanie poleceń rysujących do wykonania
 
@@ -591,6 +650,12 @@ void RenderScene(void)
 
 void MyInit(void)
 {
+
+    /*************************************************************************************/
+    // Zmienne dla obrazu tekstury
+    GLbyte* pBytes;
+    GLint ImWidth, ImHeight, ImComponents;
+    GLenum ImFormat;
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     // Kolor czyszcący (wypełnienia okna) ustawiono na czarny
@@ -681,6 +746,46 @@ void MyInit(void)
     glEnable(GL_DEPTH_TEST); // włączenie mechanizmu z-bufora
 
 /*************************************************************************************/
+    /*************************************************************************************/
+
+// Teksturowanie będzie prowadzone tyko po jednej stronie ściany
+
+    glEnable(GL_CULL_FACE);
+
+    /*************************************************************************************/
+
+    //  Przeczytanie obrazu tekstury z pliku o nazwie tekstura.tga
+
+    pBytes = LoadTGAImage("D1_t.tga", &ImWidth, &ImHeight, &ImComponents, &ImFormat);
+
+    // Zdefiniowanie tekstury 2-D
+
+    glTexImage2D(GL_TEXTURE_2D, 0, ImComponents, ImWidth, ImHeight, 0, ImFormat, GL_UNSIGNED_BYTE, pBytes);
+
+    /*************************************************************************************/
+
+    // Zwolnienie pamięci
+
+    free(pBytes);
+
+    /*************************************************************************************/
+
+    // Włączenie mechanizmu teksturowania
+
+    glEnable(GL_TEXTURE_2D);
+
+    /*************************************************************************************/
+
+    // Ustalenie trybu teksturowania
+
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    /*************************************************************************************/
+
+    // Określenie sposobu nakładania tekstur
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 
 
@@ -781,8 +886,6 @@ void main(void)
 
     GenerateEggPoints();
 
-
-
     glutDisplayFunc(RenderScene);
     glutReshapeFunc(ChangeSize);
 
@@ -798,7 +901,7 @@ void main(void)
 
 
 
-    glutIdleFunc(spinEgg);
+    //glutIdleFunc(spinEgg);
 
 
     MyInit();
@@ -813,4 +916,137 @@ void main(void)
 
 }
 
+
+
+
+//glBegin(GL_TRIANGLES);
+//for (int i = N / 2; i < N; i++) {
+//    int solver = N - i;
+//    for (int j = 0; j < N - 1; j++) {
+//        if (i == N - 1) {
+//            glVertex3f(EggPoints[i][j + 1].x, EggPoints[i][j + 1].y - 5, EggPoints[i][j + 1].z);
+//            glNormal3f(EggPoints[i][j + 1].NVectorX, EggPoints[i][j + 1].NVectorY, EggPoints[i][j + 1].NVectorZ);
+//            glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
+//            glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
+//            glVertex3f(EggPoints[0][0].x, EggPoints[0][0].y - 5, EggPoints[0][0].z);
+//            glNormal3f(EggPoints[0][0].NVectorX, EggPoints[0][0].NVectorY, EggPoints[0][0].NVectorZ);
+
+//        }
+//        else {
+//            
+//            
+//            glVertex3f(EggPoints[i + 1][j + 1].x, EggPoints[i + 1][j + 1].y - 5, EggPoints[i + 1][j + 1].z);
+//            glNormal3f(EggPoints[i + 1][j + 1].NVectorX, EggPoints[i + 1][j + 1].NVectorY, EggPoints[i + 1][j + 1].NVectorZ);
+//            
+//            glVertex3f(EggPoints[i + 1][j].x, EggPoints[i + 1][j].y - 5, EggPoints[i + 1][j].z);
+//            glNormal3f(EggPoints[i + 1][j].NVectorX, EggPoints[i + 1][j].NVectorY, EggPoints[i + 1][j].NVectorZ);
+
+//            glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
+//            glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
+
+
+//            //glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
+//            //glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
+//            //glVertex3f(EggPoints[i][j + 1].x, EggPoints[i][j + 1].y - 5, EggPoints[i][j + 1].z);
+//            //glNormal3f(EggPoints[i][j + 1].NVectorX, EggPoints[i][j + 1].NVectorY, EggPoints[i][j + 1].NVectorZ);
+//            //glVertex3f(EggPoints[i + 1][j + 1].x, EggPoints[i + 1][j + 1].y - 5, EggPoints[i + 1][j + 1].z);
+//            //glNormal3f(EggPoints[i + 1][j + 1].NVectorX, EggPoints[i + 1][j + 1].NVectorY, EggPoints[i + 1][j + 1].NVectorZ);
+
+//        }
+//        if (solver != N) {
+//            glVertex3f(EggPoints[i][0].x, EggPoints[i][0].y - 5, EggPoints[i][0].z);
+//            glNormal3f(EggPoints[i][0].NVectorX, EggPoints[i][0].NVectorY, EggPoints[i][0].NVectorZ);
+//            glVertex3f(EggPoints[solver][N - 1].x, EggPoints[solver][N - 1].y - 5, EggPoints[solver][N - 1].z);
+//            glNormal3f(EggPoints[solver][N - 1].NVectorX, EggPoints[solver][N - 1].NVectorY, EggPoints[solver][N - 1].NVectorZ);
+//            glVertex3f(EggPoints[solver + 1][N - 1].x, EggPoints[solver + 1][N - 1].y - 5, EggPoints[solver + 1][N - 1].z);
+//            glNormal3f(EggPoints[solver + 1][N - 1].NVectorX, EggPoints[solver + 1][N - 1].NVectorY, EggPoints[solver + 1][N - 1].NVectorZ);
+
+//            if (i != N / 2) {
+//                glVertex3f(EggPoints[i][0].x, EggPoints[i][0].y - 5, EggPoints[i][0].z);
+//                glNormal3f(EggPoints[i][0].NVectorX, EggPoints[i][0].NVectorY, EggPoints[i][0].NVectorZ);
+//                glVertex3f(EggPoints[i - 1][0].x, EggPoints[i - 1][0].y - 5, EggPoints[i - 1][0].z);
+//                glNormal3f(EggPoints[i - 1][0].NVectorX, EggPoints[i - 1][0].NVectorY, EggPoints[i - 1][0].NVectorZ);
+//                glVertex3f(EggPoints[solver + 1][N - 1].x, EggPoints[solver + 1][N - 1].y - 5, EggPoints[solver + 1][N - 1].z);
+//                glNormal3f(EggPoints[solver + 1][N - 1].NVectorX, EggPoints[solver + 1][N - 1].NVectorY - 5, EggPoints[solver + 1][N - 1].NVectorZ);
+
+//            }
+//        }
+//    }
+//}
+//glVertex3f(EggPoints[0][0].x, EggPoints[0][0].y - 5, EggPoints[0][0].z);
+//glNormal3f(EggPoints[0][0].NVectorX, EggPoints[0][0].NVectorY, EggPoints[0][0].NVectorZ);
+//glVertex3f(EggPoints[N - 1][0].x, EggPoints[N - 1][0].y - 5, EggPoints[N - 1][0].z);
+//glNormal3f(EggPoints[N - 1][0].NVectorX, EggPoints[N - 1][0].NVectorY, EggPoints[N - 1][0].NVectorZ);
+//glVertex3f(EggPoints[1][N - 1].x, EggPoints[1][N - 1].y - 5, EggPoints[1][N - 1].z);
+//glNormal3f(EggPoints[1][N - 1].NVectorX, EggPoints[1][N - 1].NVectorY, EggPoints[1][N - 1].NVectorZ);
+
+
+
+//glVertex3f(EggPoints[0][0].x, EggPoints[0][0].y - 5, EggPoints[0][0].z);
+//glNormal3f(EggPoints[0][0].NVectorX, EggPoints[0][0].NVectorY, EggPoints[0][0].NVectorZ);
+//glVertex3f(EggPoints[1][0].x, EggPoints[1][0].y - 5, EggPoints[1][0].z);
+//glNormal3f(EggPoints[1][0].NVectorX, EggPoints[1][0].NVectorY, EggPoints[1][0].NVectorZ);
+//glVertex3f(EggPoints[N - 1][N - 1].x, EggPoints[N - 1][N - 1].y - 5, EggPoints[N - 1][N - 1].z);
+//glNormal3f(EggPoints[N - 1][N - 1].NVectorX, EggPoints[N - 1][N - 1].NVectorY, EggPoints[N - 1][N - 1].NVectorZ);
+
+
+
+
+//for (int i = 0; i < N / 2 + 1; i++) {
+//    int pom = N - i;
+//    for (int j = 0; j < N - 1; j++) {
+//        if (i == 1) {
+//            glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
+//            glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
+//            glVertex3f(EggPoints[i][j + 1].x, EggPoints[i][j + 1].y - 5, EggPoints[i][j + 1].z);
+//            glNormal3f(EggPoints[i][j + 1].NVectorX, EggPoints[i][j + 1].NVectorY, EggPoints[i][j + 1].NVectorZ);
+//            glVertex3f(EggPoints[0][0].x, EggPoints[0][0].y - 5, EggPoints[0][0].z);
+//            glNormal3f(EggPoints[0][0].NVectorX, EggPoints[0][0].NVectorY, EggPoints[0][0].NVectorZ);
+
+//        }
+//        else {
+//            if (i != 0) {
+//                glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
+//                glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
+//                glVertex3f(EggPoints[i - 1][j].x, EggPoints[i - 1][j].y - 5, EggPoints[i - 1][j].z);
+//                glNormal3f(EggPoints[i - 1][j].NVectorX, EggPoints[i - 1][j].NVectorY, EggPoints[i - 1][j].NVectorZ);
+//                glVertex3f(EggPoints[i - 1][j + 1].x, EggPoints[i - 1][j + 1].y - 5, EggPoints[i - 1][j + 1].z);
+//                glNormal3f(EggPoints[i - 1][j + 1].NVectorX, EggPoints[i - 1][j + 1].NVectorY, EggPoints[i - 1][j + 1].NVectorZ);
+
+
+
+
+
+//                glVertex3f(EggPoints[i][j].x, EggPoints[i][j].y - 5, EggPoints[i][j].z);
+//                glNormal3f(EggPoints[i][j].NVectorX, EggPoints[i][j].NVectorY, EggPoints[i][j].NVectorZ);
+//                glVertex3f(EggPoints[i][j + 1].x, EggPoints[i][j + 1].y - 5, EggPoints[i][j + 1].z);
+//                glNormal3f(EggPoints[i][j + 1].NVectorX, EggPoints[i][j + 1].NVectorY, EggPoints[i][j + 1].NVectorZ);
+//                glVertex3f(EggPoints[i - 1][j + 1].x, EggPoints[i - 1][j + 1].y - 5, EggPoints[i - 1][j + 1].z);
+//                glNormal3f(EggPoints[i - 1][j + 1].NVectorX, EggPoints[i - 1][j + 1].NVectorY, EggPoints[i - 1][j + 1].NVectorZ);
+//            }
+//        }
+//        if (pom != N) {
+//            glVertex3f(EggPoints[i][0].x, EggPoints[i][0].y - 5, EggPoints[i][0].z);
+//            glNormal3f(EggPoints[i][0].NVectorX, EggPoints[i][0].NVectorY, EggPoints[i][0].NVectorZ);
+//            glVertex3f(EggPoints[pom][N - 1].x, EggPoints[pom][N - 1].y - 5, EggPoints[pom][N - 1].z);
+//            glNormal3f(EggPoints[pom][N - 1].NVectorX, EggPoints[pom][N - 1].NVectorY, EggPoints[pom][N - 1].NVectorZ);
+//            glNormal3f(EggPoints[pom - 1][N - 1].NVectorX, EggPoints[pom - 1][N - 1].NVectorY, EggPoints[pom - 1][N - 1].NVectorZ);
+//            glVertex3f(EggPoints[pom - 1][N - 1].x, EggPoints[pom - 1][N - 1].y - 5, EggPoints[pom - 1][N - 1].z);
+
+
+
+
+//            glVertex3f(EggPoints[i][0].x, EggPoints[i][0].y - 5, EggPoints[i][0].z);
+//            glNormal3f(EggPoints[i][0].NVectorX, EggPoints[i][0].NVectorY, EggPoints[i][0].NVectorZ);
+//            glVertex3f(EggPoints[i + 1][0].x, EggPoints[i + 1][0].y - 5, EggPoints[i + 1][0].z);
+//            glNormal3f(EggPoints[i + 1][0].NVectorX, EggPoints[i + 1][0].NVectorY, EggPoints[i + 1][0].NVectorZ);
+//            glVertex3f(EggPoints[pom - 1][N - 1].x, EggPoints[pom - 1][N - 1].y - 5, EggPoints[pom - 1][N - 1].z);
+//            glNormal3f(EggPoints[pom - 1][N - 1].NVectorX, EggPoints[pom - 1][N - 1].NVectorY, EggPoints[pom - 1][N - 1].NVectorZ);
+
+
+//        }
+//    }
+//}
+
+//glEnd();
 /*************************************************************************************/
